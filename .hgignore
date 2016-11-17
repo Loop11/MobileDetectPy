@@ -3,3 +3,4 @@ pymobiledetect.egg-info
 build/
 dist/
 .idea
+.eggs
