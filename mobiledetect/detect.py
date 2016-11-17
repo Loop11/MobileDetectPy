@@ -8,6 +8,7 @@ Thanks to:
 
 import os
 import re
+import six
 import json
 from hashlib import sha1
 
@@ -21,8 +22,10 @@ MOBILE_HTTP_HEADERS = {}
 UA_HTTP_HEADERS = {}
 UTILITIES = {}
 
+
 class MobileDetectRuleFileError(Exception):
     pass
+
 
 class MobileDetectError(Exception):
     pass
@@ -41,23 +44,26 @@ def load_rules(filename=None):
 
     if filename is None:
         filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Mobile_Detect.json")
-    rules = json.load(open(filename))
-    if not "version" in rules:
+
+    with open(filename) as f:
+        rules = json.load(f)
+
+    if "version" not in rules:
         raise MobileDetectRuleFileError("version not found in rule file: %s" % filename)
-    if not "headerMatch" in rules:
+    if "headerMatch" not in rules:
         raise MobileDetectRuleFileError("section 'headerMatch' not found in rule file: %s" % filename)
-    if not "uaHttpHeaders" in rules:
+    if "uaHttpHeaders" not in rules:
         raise MobileDetectRuleFileError("section 'uaHttpHeaders' not found in rule file: %s" % filename)
-    if not "uaMatch" in rules:
+    if "uaMatch" not in rules:
         raise MobileDetectRuleFileError("section 'uaMatch' not found in rule file: %s" % filename)
 
-    MOBILE_HTTP_HEADERS = dict((http_header, matches) for http_header, matches in rules["headerMatch"].iteritems())
+    MOBILE_HTTP_HEADERS = dict((http_header, matches) for http_header, matches in six.iteritems(rules["headerMatch"]))
     UA_HTTP_HEADERS = rules['uaHttpHeaders']
-    OPERATINGSYSTEMS = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in rules['uaMatch']['os'].iteritems())
-    DEVICE_PHONES = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in rules['uaMatch']['phones'].iteritems())
-    DEVICE_TABLETS = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in rules['uaMatch']['tablets'].iteritems())
-    DEVICE_BROWSERS = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in rules['uaMatch']['browsers'].iteritems())
-    UTILITIES = dict((name, re.compile(match, re.IGNORECASE | re.DOTALL)) for name, match in rules['uaMatch']['utilities'].iteritems())
+    OPERATINGSYSTEMS = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in six.iteritems(rules['uaMatch']['os']))
+    DEVICE_PHONES = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in six.iteritems(rules['uaMatch']['phones']))
+    DEVICE_TABLETS = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in six.iteritems(rules['uaMatch']['tablets']))
+    DEVICE_BROWSERS = dict((name, re.compile(match, re.IGNORECASE|re.DOTALL)) for name, match in six.iteritems(rules['uaMatch']['browsers']))
+    UTILITIES = dict((name, re.compile(match, re.IGNORECASE | re.DOTALL)) for name, match in six.iteritems(rules['uaMatch']['utilities']))
 
     ALL_RULES = {}
     ALL_RULES.update(OPERATINGSYSTEMS)
@@ -69,7 +75,8 @@ def load_rules(filename=None):
     ALL_RULES_EXTENDED.update(ALL_RULES)
     ALL_RULES_EXTENDED.update(UTILITIES)
 
-    ALL_RULES_EXTENDED = dict((k.lower(), v) for k, v in ALL_RULES_EXTENDED.iteritems())
+    ALL_RULES_EXTENDED = dict((k.lower(), v) for k, v in six.iteritems(ALL_RULES_EXTENDED))
+
 
 load_rules()
 
@@ -157,13 +164,13 @@ class MobileDetect(object):
                         self.useragent = request.META[http_header]
                         break
 
-            for http_header, matches in MOBILE_HTTP_HEADERS.iteritems():
-                if not http_header in request.META:
+            for http_header, matches in six.iteritems(MOBILE_HTTP_HEADERS):
+                if http_header not in request.META:
                     continue
 
                 header_value = request.META[http_header]
                 if matches and isinstance(matches, dict) and 'matches' in matches:
-                    if not header_value in matches['matches']:
+                    if header_value not in matches['matches']:
                         continue
 
                 self.headers[http_header] = header_value
@@ -177,7 +184,7 @@ class MobileDetect(object):
         if self.useragent is None:
             self.useragent = ""
 
-        for name, prop in self.properties.iteritems():
+        for name, prop in six.iteritems(self.properties):
             if type(prop) is not list:
                 self.properties[name] = [self.properties[name]]
 
@@ -243,28 +250,28 @@ class MobileDetect(object):
 
     def detect_phone(self):
         """ Is Phone Device """
-        for name, rule in DEVICE_PHONES.iteritems():
+        for name, rule in six.iteritems(DEVICE_PHONES):
             if rule.search(self.useragent):
                 return name
         return False
 
     def detect_tablet(self):
         """ Is Tabled Device """
-        for name, rule in DEVICE_TABLETS.iteritems():
+        for name, rule in six.iteritems(DEVICE_TABLETS):
             if rule.search(self.useragent):
                 return name
         return False
 
     def detect_mobile_os(self):
         """ Is Mobile OperatingSystem """
-        for name, rule in OPERATINGSYSTEMS.iteritems():
+        for name, rule in six.iteritems(OPERATINGSYSTEMS):
             if rule.search(self.useragent):
                 return name
         return False
 
     def detect_mobile_ua(self):
         """ Is Mobile User-Agent """
-        for name, rule in DEVICE_BROWSERS.iteritems():
+        for name, rule in six.iteritems(DEVICE_BROWSERS):
             if rule.search(self.useragent):
                 return name
         return False
@@ -372,7 +379,7 @@ class MobileDetect(object):
                 self.version('Android') >= 2.3) or
             # Kindle 3 and Fire  - Tested on the built-in WebKit browser for each
             (self.match('Kindle Fire') or
-            self.is_rule('Kindle') and self.version('Kindle') >= 3.0) or
+                self.is_rule('Kindle') and self.version('Kindle') >= 3.0) or
             # Nook Color 1.4.1 - Tested on original Nook Color, not Nook Tablet
             self.is_rule('AndroidOS') and self.is_rule('NookTablet') or
             # Chrome Desktop 16-24 - Tested on OS X 10.7 and Windows 7
@@ -418,7 +425,6 @@ class MobileDetect(object):
             self.version('IE') <= 7.0 and not isMobile
         ):
             return self.MOBILE_GRADE_C
-
 
         # All older smartphone platforms and featurephones - Any device that doesn't support media queries
         # will receive the basic, C grade experience.
