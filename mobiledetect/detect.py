@@ -10,6 +10,7 @@ import os
 import re
 import six
 import json
+import pkgutil
 from hashlib import sha1
 
 OPERATINGSYSTEMS = {}
@@ -43,10 +44,10 @@ def load_rules(filename=None):
     global UTILITIES
 
     if filename is None:
-        filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Mobile_Detect.json")
-
-    with open(filename) as f:
-        rules = json.load(f)
+        rules = json.loads(pkgutil.get_data(__name__, "Mobile_Detect.json").decode())
+    else:
+        with open(filename) as f:
+            rules = json.load(f)
 
     if "version" not in rules:
         raise MobileDetectRuleFileError("version not found in rule file: %s" % filename)
