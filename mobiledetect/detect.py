@@ -21,6 +21,7 @@ ALL_RULES_EXTENDED = {}
 MOBILE_HEADERS = {}
 UA_HTTP_HEADERS = {}
 UTILITIES = {}
+PROPERTIES = {}
 
 
 class MobileDetectRuleFileError(Exception):
@@ -41,6 +42,7 @@ def load_rules(filename=None):
     global MOBILE_HEADERS
     global UA_HTTP_HEADERS
     global UTILITIES
+    global PROPERTIES
 
     if filename is None:
         rules = json.loads(
@@ -81,6 +83,7 @@ def load_rules(filename=None):
     UTILITIES = dict(
         (name, re.compile(match, re.IGNORECASE | re.DOTALL))
         for name, match in six.iteritems(rules['uaMatch']['utilities']))
+    PROPERTIES = rules['properties']
 
     ALL_RULES = {}
     ALL_RULES.update(OPERATING_SYSTEMS)
@@ -104,115 +107,6 @@ class MobileDetect(object):
     MOBILE_GRADE_B = 'B'
     MOBILE_GRADE_C = 'C'
     VERSION_TYPE_FLOAT = 'float'
-
-    properties = {
-        # Build
-        'Mobile':
-        'Mobile/[VER]',
-        'Build':
-        'Build/[VER]',
-        'Version':
-        'Version/[VER]',
-        'VendorID':
-        'VendorID/[VER]',
-        # Devices
-        'iPad':
-        'iPad.*CPU[a-z ]+[VER]',
-        'iPhone':
-        'iPhone.*CPU[a-z ]+[VER]',
-        'iPod':
-        'iPod.*CPU[a-z ]+[VER]',
-        # 'BlackBerry'  : {'BlackBerry[VER]', 'BlackBerry [VER];'},
-        'Kindle':
-        'Kindle/[VER]',
-        # Browser
-        'Chrome': ['Chrome/[VER]', 'CriOS/[VER]', 'CrMo/[VER]'],
-        'Coast':
-        'Coast/[VER]',
-        'Dolfin':
-        'Dolfin/[VER]',
-        # @reference: https:#developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent/Firefox
-        'Firefox': ['Firefox/[VER]', 'FxiOS/[VER]'],
-        'Fennec':
-        'Fennec/[VER]',
-        # http:#msdn.microsoft.com/en-us/library/ms537503(v=vs.85).aspx
-        # https:#msdn.microsoft.com/en-us/library/ie/hh869301(v=vs.85).aspx
-        'Edge':
-        'Edge/[VER]',
-        'IE': [
-            'IEMobile/[VER];', 'IEMobile [VER]', 'MSIE [VER];',
-            'Trident/[0-9.]+;.*rv:[VER]'
-        ],
-        # http:#en.wikipedia.org/wiki/NetFront
-        'NetFront':
-        'NetFront/[VER]',
-        'NokiaBrowser':
-        'NokiaBrowser/[VER]',
-        'Opera': [' OPR/[VER]', 'Opera Mini/[VER]', 'Version/[VER]'],
-        'Opera Mini':
-        'Opera Mini/[VER]',
-        'Opera Mobi':
-        'Version/[VER]',
-        'UC Browser':
-        'UC Browser[VER]',
-        'MQQBrowser':
-        'MQQBrowser/[VER]',
-        'MicroMessenger':
-        'MicroMessenger/[VER]',
-        'baiduboxapp':
-        'baiduboxapp/[VER]',
-        'baidubrowser':
-        'baidubrowser/[VER]',
-        'SamsungBrowser':
-        'SamsungBrowser/[VER]',
-        'Iron':
-        'Iron/[VER]',
-        # @note: Safari 7534.48.3 is actually Version 5.1.
-        # @note: On BlackBerry the Version is overwriten by the OS.
-        'Safari': ['Version/[VER]', 'Safari/[VER]'],
-        'Skyfire':
-        'Skyfire/[VER]',
-        'Tizen':
-        'Tizen/[VER]',
-        'Webkit':
-        'webkit[ /][VER]',
-        'PaleMoon':
-        'PaleMoon/[VER]',
-        # Engine
-        'Gecko':
-        'Gecko/[VER]',
-        'Trident':
-        'Trident/[VER]',
-        'Presto':
-        'Presto/[VER]',
-        'Goanna':
-        'Goanna/[VER]',
-        # OS
-        'iOS':
-        ' \\bi?OS\\b [VER][ ;]{1}',
-        'Android':
-        'Android [VER]',
-        'BlackBerry': [
-            'BlackBerry[\w]+/[VER]', 'BlackBerry.*Version/[VER]',
-            'Version/[VER]'
-        ],
-        'BREW':
-        'BREW [VER]',
-        'Java':
-        'Java/[VER]',
-        # @reference: http:#windowsteamblog.com/windows_phone/b/wpdev/archive/2011/08/29/introducing-the-ie9-on-windows-phone-mango-user-agent-string.aspx
-        # @reference: http:#en.wikipedia.org/wiki/Windows_NT#Releases
-        'Windows Phone OS': ['Windows Phone OS [VER]', 'Windows Phone [VER]'],
-        'Windows Phone':
-        'Windows Phone [VER]',
-        'Windows CE':
-        'Windows CE/[VER]',
-        # http:#social.msdn.microsoft.com/Forums/en-US/windowsdeveloperpreviewgeneral/thread/6be392da-4d2f-41b4-8354-8dcee20c85cd
-        'Windows NT':
-        'Windows NT [VER]',
-        'Symbian': ['SymbianOS/[VER]', 'Symbian/[VER]'],
-        'webOS': ['webOS/[VER]', 'hpwOS/[VER];'],
-    }
 
     def __init__(self, request=None, user_agent=None, headers=None):
         self.request = request
@@ -248,9 +142,9 @@ class MobileDetect(object):
         if self.user_agent is None:
             self.user_agent = ""
 
-        for name, prop in six.iteritems(self.properties):
+        for name, prop in six.iteritems(PROPERTIES):
             if type(prop) is not list:
-                self.properties[name] = [self.properties[name]]
+                PROPERTIES[name] = [PROPERTIES[name]]
 
     def __getitem__(self, key):
         try:
@@ -369,10 +263,10 @@ class MobileDetect(object):
         return result
 
     def version(self, property_name):
-        if not property_name or property_name not in self.properties:
+        if not property_name or property_name not in PROPERTIES:
             return False
 
-        for property_match_string in self.properties[property_name]:
+        for property_match_string in PROPERTIES[property_name]:
             property_pattern = property_match_string.replace('[VER]',
                                                              '([\w._\+]+)')
 
