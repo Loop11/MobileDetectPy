@@ -53,7 +53,7 @@ class UserAgentsTest(unittest.TestCase):
         try:
             for key, version in entry["version"].iteritems():
                 self.assertEqual(
-                    md.prepareversionno(version), md.version(key))
+                    md.prepare_version_no(version), md.version(key))
         except KeyError:
             # skip version check when no version entry
             pass

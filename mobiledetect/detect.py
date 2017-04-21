@@ -251,7 +251,7 @@ class MobileDetect(object):
                 return True
         return False
 
-    def prepareversionno(self, ver):
+    def prepare_version_no(self, ver):
         ver = ver.replace('_', '.').replace(' ', '.').replace('/', '.')
         ver_list = ver.split('.', 1)
         if len(ver_list) > 1:
@@ -273,7 +273,7 @@ class MobileDetect(object):
             matches = re.search(property_pattern, self.user_agent,
                                 re.IGNORECASE | re.DOTALL)
             if matches is not None and len(matches.groups()) > 0:
-                return self.prepareversionno(matches.group(1))
+                return self.prepare_version_no(matches.group(1))
 
         return False
 
