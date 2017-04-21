@@ -7,7 +7,9 @@ from ..detect import MobileDetect
 
 class UserAgentsTest(unittest.TestCase):
     def setUp(self):
-        filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test_user_agents.json')
+        filename = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'test_user_agents.json')
         with open(filename) as f:
             self.user_agents = json.load(f)
 
@@ -18,9 +20,13 @@ class UserAgentsTest(unittest.TestCase):
             useragent = entry['user_agent']
             is_mobile = MobileDetect(useragent=useragent).is_mobile()
             if entry['mobile']:
-                self.assertTrue(is_mobile, msg="Failed mobile useragent string: '%s'" % useragent)
+                self.assertTrue(
+                    is_mobile,
+                    msg="Failed mobile useragent string: '%s'" % useragent)
             else:
-                self.assertFalse(is_mobile, msg="Failed mobile useragent string: '%s'" % useragent)
+                self.assertFalse(
+                    is_mobile,
+                    msg="Failed mobile useragent string: '%s'" % useragent)
 
     def test_is_tablet(self):
         for entry in self.user_agents['user_agents']:
@@ -29,6 +35,10 @@ class UserAgentsTest(unittest.TestCase):
             useragent = entry['user_agent']
             is_tablet = MobileDetect(useragent=useragent).is_tablet()
             if entry['tablet']:
-                self.assertTrue(is_tablet, msg="Failed tablet useragent string: '%s'" % useragent)
+                self.assertTrue(
+                    is_tablet,
+                    msg="Failed tablet useragent string: '%s'" % useragent)
             else:
-                self.assertFalse(is_tablet, msg="Failed tablet useragent string: '%s'" % useragent)
+                self.assertFalse(
+                    is_tablet,
+                    msg="Failed tablet useragent string: '%s'" % useragent)
