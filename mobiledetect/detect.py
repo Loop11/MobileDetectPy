@@ -12,17 +12,6 @@ import json
 import pkgutil
 from hashlib import sha1
 
-OPERATING_SYSTEMS = {}
-PHONE_DEVICES = {}
-TABLET_DEVICES = {}
-BROWSERS = {}
-ALL_RULES = {}
-ALL_RULES_EXTENDED = {}
-MOBILE_HEADERS = {}
-UA_HTTP_HEADERS = {}
-UTILITIES = {}
-PROPERTIES = {}
-
 
 class MobileDetectRuleFileError(Exception):
     pass
@@ -32,74 +21,95 @@ class MobileDetectError(Exception):
     pass
 
 
-def load_rules(filename=None):
-    global OPERATING_SYSTEMS
-    global PHONE_DEVICES
-    global TABLET_DEVICES
-    global BROWSERS
-    global ALL_RULES
-    global ALL_RULES_EXTENDED
-    global MOBILE_HEADERS
-    global UA_HTTP_HEADERS
-    global UTILITIES
-    global PROPERTIES
+# works in Python 2 & 3
+class _Singleton(type):
+    """ A metaclass that creates a Singleton base class when called. """
+    _instances = {}
 
-    if filename is None:
-        rules = json.loads(
-            pkgutil.get_data(__name__, "Mobile_Detect.json").decode())
-    else:
-        with open(filename) as f:
-            rules = json.load(f)
-
-    if "version" not in rules:
-        raise MobileDetectRuleFileError("version not found in rule file: %s" %
-                                        filename)
-    if "headerMatch" not in rules:
-        raise MobileDetectRuleFileError(
-            "section 'headerMatch' not found in rule file: %s" % filename)
-    if "uaHttpHeaders" not in rules:
-        raise MobileDetectRuleFileError(
-            "section 'uaHttpHeaders' not found in rule file: %s" % filename)
-    if "uaMatch" not in rules:
-        raise MobileDetectRuleFileError(
-            "section 'uaMatch' not found in rule file: %s" % filename)
-
-    MOBILE_HEADERS = dict(
-        (http_header, matches)
-        for http_header, matches in six.iteritems(rules["headerMatch"]))
-    UA_HTTP_HEADERS = rules['uaHttpHeaders']
-    OPERATING_SYSTEMS = dict(
-        (name, re.compile(match, re.IGNORECASE | re.DOTALL))
-        for name, match in six.iteritems(rules['uaMatch']['os']))
-    PHONE_DEVICES = dict(
-        (name, re.compile(match, re.IGNORECASE | re.DOTALL))
-        for name, match in six.iteritems(rules['uaMatch']['phones']))
-    TABLET_DEVICES = dict(
-        (name, re.compile(match, re.IGNORECASE | re.DOTALL))
-        for name, match in six.iteritems(rules['uaMatch']['tablets']))
-    BROWSERS = dict(
-        (name, re.compile(match, re.IGNORECASE | re.DOTALL))
-        for name, match in six.iteritems(rules['uaMatch']['browsers']))
-    UTILITIES = dict(
-        (name, re.compile(match, re.IGNORECASE | re.DOTALL))
-        for name, match in six.iteritems(rules['uaMatch']['utilities']))
-    PROPERTIES = rules['properties']
-
-    ALL_RULES = {}
-    ALL_RULES.update(OPERATING_SYSTEMS)
-    ALL_RULES.update(PHONE_DEVICES)
-    ALL_RULES.update(TABLET_DEVICES)
-    ALL_RULES.update(BROWSERS)
-
-    ALL_RULES_EXTENDED = {}
-    ALL_RULES_EXTENDED.update(ALL_RULES)
-    ALL_RULES_EXTENDED.update(UTILITIES)
-
-    ALL_RULES_EXTENDED = dict((k.lower(), v)
-                              for k, v in six.iteritems(ALL_RULES_EXTENDED))
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(_Singleton, cls).__call__(*args,
+                                                                  **kwargs)
+        return cls._instances[cls]
 
 
-load_rules()
+class Singleton(_Singleton('SingletonMeta', (object, ), {})):
+    pass
+
+
+class Rules(Singleton):
+    def __init__(self):
+        self.load_rules()
+
+    def load_rules(self, filename=None):
+        if filename is None:
+            rules = json.loads(
+                pkgutil.get_data(__name__, "Mobile_Detect.json").decode())
+        else:
+            with open(filename) as f:
+                rules = json.load(f)
+
+        if "version" not in rules:
+            raise MobileDetectRuleFileError(
+                "version not found in rule file: %s" % filename)
+        if "headerMatch" not in rules:
+            raise MobileDetectRuleFileError(
+                "section 'headerMatch' not found in rule file: %s" % filename)
+        if "uaHttpHeaders" not in rules:
+            raise MobileDetectRuleFileError(
+                "section 'uaHttpHeaders' not found in rule file: %s" %
+                filename)
+        if "uaMatch" not in rules:
+            raise MobileDetectRuleFileError(
+                "section 'uaMatch' not found in rule file: %s" % filename)
+        if "properties" not in rules:
+            raise MobileDetectRuleFileError(
+                "section 'properties' not found in rule file: %s" % filename)
+
+        self.mobile_headers = dict(
+            (http_header, matches)
+            for http_header, matches in six.iteritems(rules["headerMatch"]))
+
+        self.ua_http_headers = rules['uaHttpHeaders']
+
+        self.operating_systems = dict(
+            (name, re.compile(match, re.IGNORECASE | re.DOTALL))
+            for name, match in six.iteritems(rules['uaMatch']['os']))
+
+        self.phone_devices = dict(
+            (name, re.compile(match, re.IGNORECASE | re.DOTALL))
+            for name, match in six.iteritems(rules['uaMatch']['phones']))
+
+        self.tablet_devices = dict(
+            (name, re.compile(match, re.IGNORECASE | re.DOTALL))
+            for name, match in six.iteritems(rules['uaMatch']['tablets']))
+
+        self.browsers = dict(
+            (name, re.compile(match, re.IGNORECASE | re.DOTALL))
+            for name, match in six.iteritems(rules['uaMatch']['browsers']))
+
+        self.utilities = dict(
+            (name, re.compile(match, re.IGNORECASE | re.DOTALL))
+            for name, match in six.iteritems(rules['uaMatch']['utilities']))
+
+        properties = rules['properties']
+        for name, prop in six.iteritems(properties):
+            if type(prop) is not list:
+                properties[name] = [properties[name]]
+        self.properties = properties
+
+        self.all_rules = {}
+        self.all_rules.update(self.operating_systems)
+        self.all_rules.update(self.phone_devices)
+        self.all_rules.update(self.tablet_devices)
+        self.all_rules.update(self.browsers)
+
+        self.all_rules_extended = {}
+        self.all_rules_extended.update(self.all_rules)
+        self.all_rules_extended.update(self.utilities)
+
+        self.all_rules_extended = dict(
+            (k.lower(), v) for k, v in six.iteritems(self.all_rules_extended))
 
 
 class MobileDetect(object):
@@ -115,12 +125,12 @@ class MobileDetect(object):
 
         if self.request is not None:
             if self.user_agent is None:
-                for http_header in UA_HTTP_HEADERS:
+                for http_header in Rules().ua_http_headers:
                     if http_header in request.META:
                         self.user_agent = request.META[http_header]
                         break
 
-            for http_header, matches in six.iteritems(MOBILE_HEADERS):
+            for http_header, matches in six.iteritems(Rules().mobile_headers):
                 if http_header not in request.META:
                     continue
 
@@ -142,13 +152,9 @@ class MobileDetect(object):
         if self.user_agent is None:
             self.user_agent = ""
 
-        for name, prop in six.iteritems(PROPERTIES):
-            if type(prop) is not list:
-                PROPERTIES[name] = [PROPERTIES[name]]
-
     def __getitem__(self, key):
         try:
-            if ALL_RULES[key].search(self.user_agent):
+            if Rules().all_rules[key].search(self.user_agent):
                 return True
         except KeyError:
             pass
@@ -156,7 +162,7 @@ class MobileDetect(object):
 
     def __contains__(self, key):
         try:
-            if ALL_RULES[key].search(self.user_agent):
+            if Rules().all_rules[key].search(self.user_agent):
                 return True
         except KeyError:
             pass
@@ -209,28 +215,28 @@ class MobileDetect(object):
 
     def detect_phone(self):
         """ Is Phone Device """
-        for name, rule in six.iteritems(PHONE_DEVICES):
+        for name, rule in six.iteritems(Rules().phone_devices):
             if rule.search(self.user_agent):
                 return name
         return False
 
     def detect_tablet(self):
         """ Is Tabled Device """
-        for name, rule in six.iteritems(TABLET_DEVICES):
+        for name, rule in six.iteritems(Rules().tablet_devices):
             if rule.search(self.user_agent):
                 return name
         return False
 
     def detect_mobile_os(self):
         """ Is Mobile OperatingSystem """
-        for name, rule in six.iteritems(OPERATING_SYSTEMS):
+        for name, rule in six.iteritems(Rules().operating_systems):
             if rule.search(self.user_agent):
                 return name
         return False
 
     def detect_mobile_ua(self):
         """ Is Mobile User-Agent """
-        for name, rule in six.iteritems(BROWSERS):
+        for name, rule in six.iteritems(Rules().browsers):
             if rule.search(self.user_agent):
                 return name
         return False
@@ -246,8 +252,8 @@ class MobileDetect(object):
 
     def is_rule(self, rule):
         rule = rule.lower()
-        if rule in ALL_RULES_EXTENDED:
-            if ALL_RULES_EXTENDED[rule].search(self.user_agent):
+        if rule in Rules().all_rules_extended:
+            if Rules().all_rules_extended[rule].search(self.user_agent):
                 return True
         return False
 
@@ -263,10 +269,10 @@ class MobileDetect(object):
         return result
 
     def version(self, property_name):
-        if not property_name or property_name not in PROPERTIES:
+        if not property_name or property_name not in Rules().properties:
             return False
 
-        for property_match_string in PROPERTIES[property_name]:
+        for property_match_string in Rules().properties[property_name]:
             property_pattern = property_match_string.replace('[VER]',
                                                              '([\w._\+]+)')
 
