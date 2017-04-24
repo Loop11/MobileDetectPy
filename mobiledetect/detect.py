@@ -184,8 +184,17 @@ class MobileDetect(object):
         This is the fastest mobile check but probably also the most unreliable.
         """
 
-        if self.headers:
-            return True
+        for header_name, rule in six.iteritems(Rules().mobile_headers):
+            if header_name in self.headers:
+                if rule is not None:
+                    matches = rule['matches']
+                    header_value = self.headers[header_name]
+                    for match in matches:
+                        if match in header_value:
+                            return True
+                    return False
+                else:
+                    return True
 
         return False
 
@@ -245,10 +254,7 @@ class MobileDetect(object):
         if self.mobile_by_headers():
             return True
 
-        if self.mobile_by_useragent():
-            return True
-
-        return False
+        return self.mobile_by_useragent()
 
     def is_rule(self, rule):
         rule = rule.lower()

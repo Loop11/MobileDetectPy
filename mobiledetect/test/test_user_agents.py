@@ -5,11 +5,11 @@ import unittest
 from ..detect import MobileDetect
 
 
-class UserAgentsTest(unittest.TestCase):
+class TestUserAgents(unittest.TestCase):
     def setUp(self):
         filename = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            "test_user_agents.json")
+            "test_data.json")
         with open(filename) as f:
             self.user_agents = json.load(f)
 
